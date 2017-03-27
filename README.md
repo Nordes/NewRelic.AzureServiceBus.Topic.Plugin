@@ -1,3 +1,4 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/oe945ybj0o9uhgif/branch/master?svg=true)](https://ci.appveyor.com/project/Nordes/newrelic-azureservicebus-topic-plugin/branch/master)
 # ... code in progress... consider super unstable and not working ...
 
 # NewRelic Azure ServiceBus Topic Agent
