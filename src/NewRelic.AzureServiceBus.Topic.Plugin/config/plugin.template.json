@@ -1,0 +1,20 @@
+{
+  "agents": [
+    {
+      "name": "System name",
+      "topicSettings": [
+        {
+          "name": "Topic name",
+          "subscriptionName": "Subscription Name",
+          "connectionString": "Full Azure Storage connection string",
+          "groups": [
+            {
+              "name": "groupName",
+              "regex": "^.*(?<!poison)$" // gi  /*Should be using SQL Filter instead cref.: https://docs.microsoft.com/en-us/dotnet/api/microsoft.servicebus.messaging.sqlfilter#Microsoft_ServiceBus_Messaging_SqlFilter_SqlExpression */
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
