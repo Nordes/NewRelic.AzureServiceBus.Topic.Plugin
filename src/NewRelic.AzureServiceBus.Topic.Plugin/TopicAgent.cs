@@ -6,6 +6,11 @@ using System.Collections.Generic;
 using Microsoft.ServiceBus.Messaging;
 using Microsoft.ServiceBus;
 using Newtonsoft.Json;
+using System.IO;
+using System.Runtime.Serialization;
+using System.Xml;
+using System.Xml.Linq;
+using System.Dynamic;
 
 namespace NewRelic.AzureServiceBus.Topic.Plugin
 {
@@ -18,7 +23,7 @@ namespace NewRelic.AzureServiceBus.Topic.Plugin
     /// </remarks>
     public class TopicAgent : Agent
     {
-        private List<Object> messages = new List<object>();
+        private Dictionary<string, int> messages = new Dictionary<string, int>(); // label + amount
         private SystemConfiguration _systemConfiguration;
 
         /// <summary>
@@ -51,14 +56,14 @@ namespace NewRelic.AzureServiceBus.Topic.Plugin
             Initialize(systemConfiguration.TopicSettings);
         }
 
-        private void Initialize(List<ServiceBusTopicSettings> topicSettings)
+        private void Initialize(List<ServiceBusTopicSetting> topicSettings)
         {
             // Foreach topic configuration, create a new service listener.
             foreach (var topicSetting in topicSettings)
             {
                 var namespaceManager = NamespaceManager.CreateFromConnectionString(topicSetting.ConnectionString);
-                var Client = SubscriptionClient.CreateFromConnectionString(topicSetting.ConnectionString, topicSetting.Name, topicSetting.SubscriptionName, ReceiveMode.ReceiveAndDelete);
-                messages.Add(Client);
+                var Client = SubscriptionClient.CreateFromConnectionString(topicSetting.ConnectionString, topicSetting.Name, topicSetting.SubscriptionName, ReceiveMode.PeekLock);
+                // messages.Add(Client);
 
                 if (!namespaceManager.SubscriptionExists(topicSetting.Name, topicSetting.SubscriptionName.ToLower()))
                 {
@@ -76,15 +81,64 @@ namespace NewRelic.AzureServiceBus.Topic.Plugin
                 {
                     try
                     {
-                        ReportMetric(message.Label, "messages", 1);
+                        // If reporteveryhit 
+                        // ReportMetric(message.Label, "messages", 1);
+
+                        foreach (var propertyToGather in topicSetting.Properties)
+                        {
+                            // Metric name: $"Topics/{config.Name}/all/{topicSetting.Name}/{propertyToGather.Name}/{propertyToGather.AggregationType}";
+                            if (propertyToGather.Name.Equals("label", StringComparison.OrdinalIgnoreCase))
+                            {
+                                // Most likely to happen and it's a hit counter
+                                ReportMetric($"Topics/{_systemConfiguration.Name}/all/{topicSetting.Name}/{propertyToGather.Name}/{message.Label}", "hits", 1);
+                            }
+                            else
+                            {
+                                // It's a label, please do something
+                                if (message.Properties.TryGetValue(propertyToGather.Name, out object result))
+                                {
+                                    if (float.TryParse(result.ToString(), out float floatResult))
+                                    {
+                                        ReportMetric(
+                                            $"Topics/{_systemConfiguration.Name}/all/{topicSetting.Name}/{propertyToGather.Name}",
+                                            propertyToGather.AggregationType.ToString(),
+                                            floatResult);
+                                    }
+                                    else
+                                    {
+                                        ReportMetric(
+                                            $"Topics/{_systemConfiguration.Name}/all/{topicSetting.Name}/{propertyToGather.Name}",
+                                            propertyToGather.AggregationType.ToString(),
+                                            0);
+                                    }
+                                }
+                            }
+                        }
+
                         // Process message from subscription.
-                        //Console.WriteLine("Body: " + message.GetBody<string>());
+
+                        ////Stream stream = message.GetBody<Stream>();
+
+                        ////XmlDocument document = new XmlDocument();
+
+                        ////using (XmlReader reader = XmlReader.Create(stream))
+                        ////{
+                        ////    document.Load(stream);
+                        ////}
+
+                        ////StreamReader reader = new StreamReader(stream, System.Text.Encoding.UTF8);
+                        ////string s = reader.ReadToEnd();
+                        ////XDocument doc = XDocument.Parse(s);
+                        ////string jsonText = JsonConvert.SerializeXNode(doc);
+                        ////dynamic dyn = JsonConvert.DeserializeObject<ExpandoObject>(jsonText);
+
+                        // Console.WriteLine("Body: " + message.GetBody<dynamic>());
                         //Console.WriteLine("MessageID: " + message.MessageId);
                         //Console.WriteLine("Message Number: " + message.Properties["MessageNumber"]);
 
-                        //var messageBodyType = message.Properties["messageType"].ToString();
-                        //var contentType = Type.GetType(messageBodyType);
-                        //var runtimeInvokableMethod = typeof(BrokeredMessage).GetMethod("GetBody", new Type[] { }).MakeGenericMethod(contentType);
+                        // var messageBodyType = message.Properties["messageType"].ToString();
+                        // var contentType = Type.GetType(messageBodyType);
+                        // var runtimeInvokableMethod = typeof(BrokeredMessage).GetMethod("GetBody", new Type[] { }).MakeGenericMethod(contentType);
                         //var messageBody = runtimeInvokableMethod.Invoke(message, null);
                         //var serviceBusEventInfo = new
                         //{
@@ -148,58 +202,11 @@ namespace NewRelic.AzureServiceBus.Topic.Plugin
         /// </summary>
         public override void PollCycle()
         {
-            foreach (var topicSetting in _systemConfiguration.TopicSettings)
-            {
-                // var config = topicSetting;
-                SendTopicStats();
-            }
-        }
+            // It will send what previously was ready to be sent. (for now)
 
-        /// <summary>
-        /// Polls the storage account asynchronous.
-        /// </summary>
-        /// <param name="config">The configuration.</param>
-        private void SendTopicStats()
-        {
-            //var storageAccount = CloudStorageAccount.Parse(config.ConnectionString);
-            //var queueClient = storageAccount.CreateCloudQueueClient();
-            //var continuationToken = new QueueContinuationToken();
-
-            //while (continuationToken != null)
+            //foreach (var topicSetting in _systemConfiguration.TopicSettings)
             //{
-            //    var listResponse = queueClient.ListQueuesSegmented(continuationToken);
-
-            //    // We must ask Azure for the size of each queue individually.
-            //    // This can be done in parallel.
-            //    foreach (var queue in listResponse.Results)
-            //    {
-            //        queue.FetchAttributes();
-            //    }
-
-            //    // ReportMetric is not thread-safe, so we can't call it in the parallel
-            //    foreach (var topic in listResponse.Results)
-            //    {
-            //        var approximateMessageCount = topic.ApproximateMessageCount ?? 0;
-
-            //        // No groups, then just send and continue.
-            //        var metricName = $"Topics/{config.Name}/all/{topic.Name}/size";
-            //        ReportMetric(metricName, "messages", approximateMessageCount);
-
-            //        if (config.Groups != null)
-            //        {
-            //            // Send the data to the proper group.
-            //            foreach (var topicGroup in config.Groups)
-            //            {
-            //                if (topicGroup.AllowedInGroup(topic.Name))
-            //                {
-            //                    metricName = $"Queues/{config.Name}/groups/{topicGroup.Name}/{topic.Name}/size";
-            //                    ReportMetric(metricName, "messages", approximateMessageCount);
-            //                }
-            //            }
-            //        }
-            //    }
-
-            //    continuationToken = listResponse.ContinuationToken;
+            //    // var config = topicSetting;
             //}
         }
     }

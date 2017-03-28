@@ -29,7 +29,6 @@ namespace NewRelic.AzureServiceBus.Topic.Plugin
             _pollThread = new Thread(() =>
             {
                 var runner = new Runner();
-
                 runner.Add(new TopicAgentFactory());
 
                 runner.SetupAndRun();

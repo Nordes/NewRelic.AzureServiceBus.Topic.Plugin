@@ -104,9 +104,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AgentManager.cs" />
+    <Compile Include="Models\PropertyAggregationType.cs" />
+    <Compile Include="Models\PropertyWatchSetting.cs" />
     <Compile Include="Models\ServiceBusTopicGroup.cs" />
     <Compile Include="Models\SystemConfiguration.cs" />
-    <Compile Include="Models\ServiceBusTopicSettings.cs" />
+    <Compile Include="Models\ServiceBusTopicSetting.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TopicAgent.cs" />

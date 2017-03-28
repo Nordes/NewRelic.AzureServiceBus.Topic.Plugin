@@ -6,6 +6,6 @@ namespace NewRelic.AzureServiceBus.Topic.Plugin.Models
     {
         public string Name { get; set; }
         public string DisplayName { get; set; }
-        public List<ServiceBusTopicSettings> TopicSettings { get; set; }
+        public List<ServiceBusTopicSetting> TopicSettings { get; set; }
     }
 }
