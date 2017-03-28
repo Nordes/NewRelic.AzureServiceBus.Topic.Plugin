@@ -13,9 +13,9 @@ namespace NewRelic.AzureServiceBus.Topic.Plugin.Tests
             var config = new Models.SystemConfiguration()
             {
                 Name = "TestConfig",
-                TopicSettings = new List<Models.ServiceBusTopicSettings>()
+                TopicSettings = new List<Models.ServiceBusTopicSetting>()
                 {
-                    new Models.ServiceBusTopicSettings() {
+                    new Models.ServiceBusTopicSetting() {
                         Name = "AccountTopicA",
                         ConnectionString = "fake",
                         Groups = null
